@@ -266,12 +266,23 @@ export default function VitrineProdutos() {
 
     // Monta a URL direta para o produto e para a foto específica compartilhada
     const slug = produtoAtual.slug || produtoAtual.id;
-    const urlBase = `${window.location.origin}${window.location.pathname}`
-      .replace(/\/index\.html$/, "")
-      .replace(/\/+$/, "");
     const numeroFoto = indiceFotoAtual + 1;
-    const urlProduto = `${urlBase}?produto=${slug}&foto=${numeroFoto}`;
 
+    const url = new URL(window.location.href);
+    if (url.pathname.endsWith("/index.html")) {
+      url.pathname = url.pathname.replace(/\/index\.html$/, "/");
+    } else if (!url.pathname.endsWith("/") && !url.pathname.includes(".")) {
+      url.pathname += "/";
+    }
+    url.hash = "";
+    url.searchParams.delete("item");
+    url.searchParams.delete("img");
+    url.searchParams.delete("imagem");
+    url.searchParams.delete("f");
+    url.searchParams.set("produto", String(slug));
+    url.searchParams.set("foto", String(numeroFoto));
+
+    const urlProduto = url.toString();
     const textoMensagem = `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨\n${urlProduto}`;
 
     // Compartilhamento nativo com o arquivo da foto (WhatsApp / Instagram / redes no celular)
@@ -299,19 +310,25 @@ export default function VitrineProdutos() {
           navigator.canShare &&
           navigator.canShare({ files: [arquivoFoto] })
         ) {
-          await navigator.share({
-            title: `CJ Personalizados - ${produtoAtual.nome}`,
-            text: textoMensagem,
-            url: urlProduto,
-            files: [arquivoFoto],
-          });
-          return;
+          try {
+            await navigator.share({
+              title: `CJ Personalizados - ${produtoAtual.nome}`,
+              text: textoMensagem,
+              url: urlProduto,
+              files: [arquivoFoto],
+            });
+            return;
+          } catch (eShare) {
+            if (eShare.name === "AbortError") return;
+            // Se falhar ao enviar com arquivo (alguns apps não aceitam arquivo + texto + url juntos),
+            // tenta compartilhar somente o texto + url
+          }
         }
 
         // Caso o navegador suporte compartilhamento mas não suporte anexo de arquivo direto
         await navigator.share({
           title: `CJ Personalizados - ${produtoAtual.nome}`,
-          text: textoMensagem,
+          text: `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨`,
           url: urlProduto,
         });
         return;
