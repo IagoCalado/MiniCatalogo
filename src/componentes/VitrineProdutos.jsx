@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { redirecionarParaWhatsApp } from "../utils/whatsapp";
 import {
   Truck,
@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import Carrossel from "./Carrossel";
 import IconeWhatsApp from "./IconeWhatsApp";
-import produtos from "../utils/produtos";
+import produtos, {
+  encontrarIndiceProdutoPorIdentificador,
+} from "../utils/produtos";
 
 function IndicadorNumeroSuave({ indice, total, direcao }) {
   const [itens, setItens] = useState([
@@ -74,11 +76,92 @@ export default function VitrineProdutos() {
   const [direcao, setDirecao] = useState("neutro");
   const [copiado, setCopiado] = useState(false);
   const [fotoAtiva, setFotoAtiva] = useState(0);
+  const detalhesRef = useRef(null);
+
+  // Lê o parâmetro da URL na inicialização e sincroniza com o histórico (ex: botão voltar do celular)
+  useEffect(() => {
+    const sincronizarProdutoDaUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const paramProduto =
+        params.get("produto") ||
+        params.get("item") ||
+        window.location.hash.replace("#", "");
+
+      if (paramProduto) {
+        const indiceEncontrado =
+          encontrarIndiceProdutoPorIdentificador(paramProduto);
+        if (indiceEncontrado !== -1) {
+          setIndice(indiceEncontrado);
+          return;
+        }
+      }
+      setIndice(null);
+    };
+
+    sincronizarProdutoDaUrl();
+    window.addEventListener("popstate", sincronizarProdutoDaUrl);
+    return () =>
+      window.removeEventListener("popstate", sincronizarProdutoDaUrl);
+  }, []);
 
   useEffect(() => {
     setCopiado(false);
     setFotoAtiva(0);
+
+    // Quando abrir um produto, rola suavemente até o elemento se necessário
+    if (indice !== null && detalhesRef.current) {
+      detalhesRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
   }, [indice]);
+
+  const abrirProduto = (i) => {
+    setDirecao("neutro");
+    setIndice(i);
+    const prod = produtos[i];
+    if (prod) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("produto", prod.slug || prod.id);
+      window.history.pushState({ produto: prod.slug }, "", url.toString());
+    }
+  };
+
+  const fecharProduto = () => {
+    setIndice(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("produto");
+    url.searchParams.delete("item");
+    url.hash = "";
+    window.history.pushState({}, "", url.toString());
+  };
+
+  const irParaAnterior = () => {
+    setDirecao("anterior");
+    setFotoAtiva(0);
+    const novoIndice = (indice - 1 + produtos.length) % produtos.length;
+    setIndice(novoIndice);
+    const prod = produtos[novoIndice];
+    if (prod) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("produto", prod.slug || prod.id);
+      window.history.replaceState({ produto: prod.slug }, "", url.toString());
+    }
+  };
+
+  const irParaProximo = () => {
+    setDirecao("proximo");
+    setFotoAtiva(0);
+    const novoIndice = (indice + 1) % produtos.length;
+    setIndice(novoIndice);
+    const prod = produtos[novoIndice];
+    if (prod) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("produto", prod.slug || prod.id);
+      window.history.replaceState({ produto: prod.slug }, "", url.toString());
+    }
+  };
 
   const copiarParaAreaDeTransferencia = (texto) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -101,12 +184,14 @@ export default function VitrineProdutos() {
       ? caminhoFoto
       : `${window.location.origin}${caminhoFoto}`;
 
-    // URL limpa da loja 
-    const urlLimpa = `${window.location.origin}${window.location.pathname}`
+    // Monta a URL direta para o produto (ex: https://site.com/?produto=casamentos)
+    const slug = produtoAtual.slug || produtoAtual.id;
+    const urlBase = `${window.location.origin}${window.location.pathname}`
       .replace(/\/index\.html$/, "")
       .replace(/\/+$/, "");
+    const urlProduto = `${urlBase}?produto=${slug}`;
 
-    const textoMensagem = `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨\n${urlLimpa}`;
+    const textoMensagem = `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨\n${urlProduto}`;
 
     // Compartilhamento nativo com o arquivo da foto (WhatsApp / Instagram / redes no celular)
     if (navigator.share) {
@@ -116,7 +201,9 @@ export default function VitrineProdutos() {
           try {
             const resposta = await fetch(urlFotoCompleta);
             const blob = await resposta.blob();
-            const tipo = blob.type.startsWith("image/") ? blob.type : "image/jpeg";
+            const tipo = blob.type.startsWith("image/")
+              ? blob.type
+              : "image/jpeg";
             const extensao = tipo.includes("png") ? "png" : "jpeg";
             const nomeArquivo = `${produtoAtual.nome.toLowerCase().replace(/\s+/g, "-")}-foto-${fotoAtiva + 1}.${extensao}`;
             arquivoFoto = new File([blob], nomeArquivo, { type: tipo });
@@ -126,10 +213,15 @@ export default function VitrineProdutos() {
         }
 
         // Se o dispositivo/navegador suportar compartilhamento de arquivos
-        if (arquivoFoto && navigator.canShare && navigator.canShare({ files: [arquivoFoto] })) {
+        if (
+          arquivoFoto &&
+          navigator.canShare &&
+          navigator.canShare({ files: [arquivoFoto] })
+        ) {
           await navigator.share({
             title: `CJ Personalizados - ${produtoAtual.nome}`,
             text: textoMensagem,
+            url: urlProduto,
             files: [arquivoFoto],
           });
           return;
@@ -139,6 +231,7 @@ export default function VitrineProdutos() {
         await navigator.share({
           title: `CJ Personalizados - ${produtoAtual.nome}`,
           text: textoMensagem,
+          url: urlProduto,
         });
         return;
       } catch (erro) {
@@ -156,26 +249,14 @@ export default function VitrineProdutos() {
   if (indice !== null) {
     const produto = produtos[indice];
 
-    const irParaAnterior = () => {
-      setDirecao("anterior");
-      setFotoAtiva(0);
-      setIndice((prev) => (prev - 1 + produtos.length) % produtos.length);
-    };
-
-    const irParaProximo = () => {
-      setDirecao("proximo");
-      setFotoAtiva(0);
-      setIndice((prev) => (prev + 1) % produtos.length);
-    };
-
     const imagensDoProduto = Array.isArray(produto.imagemCapa)
       ? produto.imagemCapa
       : [produto.imagemCapa];
 
     return (
-      <div className="detalhes-produto">
+      <div ref={detalhesRef} className="detalhes-produto">
         <div className="topo-detalhes">
-          <button className="botao-voltar" onClick={() => setIndice(null)}>
+          <button className="botao-voltar" onClick={fecharProduto}>
             <ArrowLeft size={14} />
             <span>Voltar para a vitrine</span>
           </button>
@@ -258,16 +339,15 @@ export default function VitrineProdutos() {
             <div
               key={produto.id}
               className="item-grade"
-              onClick={() => {
-                setDirecao("neutro");
-                setIndice(i);
-              }}
+              onClick={() => abrirProduto(i)}
             >
               <div className="container-imagem">
                 <img
                   src={imagemCapaGrid}
                   alt={produto.nome}
                   className="imagem-quadrada"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               <span className="titulo-item">{produto.nome}</span>
