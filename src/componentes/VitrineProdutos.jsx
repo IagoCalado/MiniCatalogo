@@ -80,7 +80,6 @@ function extrairProdutoEFotoDaUrl() {
   const paramProduto =
     params.get("produto") ||
     params.get("item") ||
-    params.get("p") ||
     window.location.hash.replace("#", "");
 
   if (!paramProduto) {
