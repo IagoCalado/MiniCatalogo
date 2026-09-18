@@ -95,8 +95,8 @@ function extrairProdutoEFotoDaUrl() {
   const listaFotos = Array.isArray(prod?.imagemCapa)
     ? prod.imagemCapa
     : prod?.imagemCapa
-    ? [prod.imagemCapa]
-    : [];
+      ? [prod.imagemCapa]
+      : [];
 
   const paramFoto =
     params.get("foto") ||
@@ -111,7 +111,7 @@ function extrairProdutoEFotoDaUrl() {
       fotoIndex = num > 0 ? num - 1 : 0;
     } else {
       const encontrada = listaFotos.findIndex((img) =>
-        String(img).toLowerCase().includes(paramFoto.toLowerCase())
+        String(img).toLowerCase().includes(paramFoto.toLowerCase()),
       );
       if (encontrada !== -1) {
         fotoIndex = encontrada;
@@ -119,7 +119,10 @@ function extrairProdutoEFotoDaUrl() {
     }
   }
 
-  if (fotoIndex < 0 || (listaFotos.length > 0 && fotoIndex >= listaFotos.length)) {
+  if (
+    fotoIndex < 0 ||
+    (listaFotos.length > 0 && fotoIndex >= listaFotos.length)
+  ) {
     fotoIndex = 0;
   }
 
@@ -176,7 +179,11 @@ export default function VitrineProdutos() {
       const url = new URL(window.location.href);
       url.searchParams.set("produto", prod.slug || prod.id);
       url.searchParams.set("foto", "1");
-      window.history.pushState({ produto: prod.slug, foto: 1 }, "", url.toString());
+      window.history.pushState(
+        { produto: prod.slug, foto: 1 },
+        "",
+        url.toString(),
+      );
     }
   };
 
@@ -204,7 +211,11 @@ export default function VitrineProdutos() {
       const url = new URL(window.location.href);
       url.searchParams.set("produto", prod.slug || prod.id);
       url.searchParams.set("foto", "1");
-      window.history.replaceState({ produto: prod.slug, foto: 1 }, "", url.toString());
+      window.history.replaceState(
+        { produto: prod.slug, foto: 1 },
+        "",
+        url.toString(),
+      );
     }
   };
 
@@ -218,7 +229,11 @@ export default function VitrineProdutos() {
       const url = new URL(window.location.href);
       url.searchParams.set("produto", prod.slug || prod.id);
       url.searchParams.set("foto", "1");
-      window.history.replaceState({ produto: prod.slug, foto: 1 }, "", url.toString());
+      window.history.replaceState(
+        { produto: prod.slug, foto: 1 },
+        "",
+        url.toString(),
+      );
     }
   };
 
@@ -233,7 +248,7 @@ export default function VitrineProdutos() {
         window.history.replaceState(
           { produto: prod.slug, foto: novoIndiceFoto + 1 },
           "",
-          url.toString()
+          url.toString(),
         );
       }
     }
@@ -256,7 +271,7 @@ export default function VitrineProdutos() {
     // Pega a foto que o usuário selecionou no momento
     const indiceFotoAtual = Math.min(
       Math.max(0, fotoAtiva),
-      Math.max(0, listaFotos.length - 1)
+      Math.max(0, listaFotos.length - 1),
     );
     const caminhoFoto = listaFotos[indiceFotoAtual] || listaFotos[0];
 
@@ -314,22 +329,18 @@ export default function VitrineProdutos() {
             await navigator.share({
               title: `CJ Personalizados - ${produtoAtual.nome}`,
               text: textoMensagem,
-              url: urlProduto,
               files: [arquivoFoto],
             });
             return;
           } catch (eShare) {
             if (eShare.name === "AbortError") return;
-            // Se falhar ao enviar com arquivo (alguns apps não aceitam arquivo + texto + url juntos),
-            // tenta compartilhar somente o texto + url
           }
         }
 
         // Caso o navegador suporte compartilhamento mas não suporte anexo de arquivo direto
         await navigator.share({
           title: `CJ Personalizados - ${produtoAtual.nome}`,
-          text: `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨`,
-          url: urlProduto,
+          text: textoMensagem,
         });
         return;
       } catch (erro) {
