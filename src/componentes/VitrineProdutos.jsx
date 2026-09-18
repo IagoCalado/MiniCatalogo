@@ -73,9 +73,11 @@ export default function VitrineProdutos() {
   const [indice, setIndice] = useState(null);
   const [direcao, setDirecao] = useState("neutro");
   const [copiado, setCopiado] = useState(false);
+  const [fotoAtiva, setFotoAtiva] = useState(0);
 
   useEffect(() => {
     setCopiado(false);
+    setFotoAtiva(0);
   }, [indice]);
 
   const copiarParaAreaDeTransferencia = (texto) => {
@@ -88,16 +90,23 @@ export default function VitrineProdutos() {
   };
 
   const compartilharProduto = async (produtoAtual) => {
-    const caminhoFoto = Array.isArray(produtoAtual.imagemCapa)
-      ? produtoAtual.imagemCapa[0]
-      : produtoAtual.imagemCapa;
+    const listaFotos = Array.isArray(produtoAtual.imagemCapa)
+      ? produtoAtual.imagemCapa
+      : [produtoAtual.imagemCapa];
 
-    const urlPagina = window.location.href;
+    // Pega a foto que o usuário selecionou no momento
+    const caminhoFoto = listaFotos[fotoAtiva] || listaFotos[0];
+
     const urlFotoCompleta = caminhoFoto.startsWith("http")
       ? caminhoFoto
       : `${window.location.origin}${caminhoFoto}`;
 
-    const textoMensagem = `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨\n${urlPagina}`;
+    // URL limpa da loja 
+    const urlLimpa = `${window.location.origin}${window.location.pathname}`
+      .replace(/\/index\.html$/, "")
+      .replace(/\/+$/, "");
+
+    const textoMensagem = `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨\n${urlLimpa}`;
 
     // Compartilhamento nativo com o arquivo da foto (WhatsApp / Instagram / redes no celular)
     if (navigator.share) {
@@ -109,7 +118,7 @@ export default function VitrineProdutos() {
             const blob = await resposta.blob();
             const tipo = blob.type.startsWith("image/") ? blob.type : "image/jpeg";
             const extensao = tipo.includes("png") ? "png" : "jpeg";
-            const nomeArquivo = `${produtoAtual.nome.toLowerCase().replace(/\s+/g, "-")}.${extensao}`;
+            const nomeArquivo = `${produtoAtual.nome.toLowerCase().replace(/\s+/g, "-")}-foto-${fotoAtiva + 1}.${extensao}`;
             arquivoFoto = new File([blob], nomeArquivo, { type: tipo });
           } catch (e) {
             console.warn("Não foi possível processar o arquivo da imagem:", e);
@@ -129,19 +138,19 @@ export default function VitrineProdutos() {
         // Caso o navegador suporte compartilhamento mas não suporte anexo de arquivo direto
         await navigator.share({
           title: `CJ Personalizados - ${produtoAtual.nome}`,
-          text: `${textoMensagem}\n\nFoto: ${urlFotoCompleta}`,
+          text: textoMensagem,
         });
         return;
       } catch (erro) {
         if (erro.name !== "AbortError") {
-          copiarParaAreaDeTransferencia(`${textoMensagem}\n\nFoto: ${urlFotoCompleta}`);
+          copiarParaAreaDeTransferencia(textoMensagem);
         }
         return;
       }
     }
 
     // Fallback para computadores ou navegadores sem suporte a compartilhamento nativo
-    copiarParaAreaDeTransferencia(`${textoMensagem}\n\nFoto: ${urlFotoCompleta}`);
+    copiarParaAreaDeTransferencia(textoMensagem);
   };
 
   if (indice !== null) {
@@ -149,11 +158,13 @@ export default function VitrineProdutos() {
 
     const irParaAnterior = () => {
       setDirecao("anterior");
+      setFotoAtiva(0);
       setIndice((prev) => (prev - 1 + produtos.length) % produtos.length);
     };
 
     const irParaProximo = () => {
       setDirecao("proximo");
+      setFotoAtiva(0);
       setIndice((prev) => (prev + 1) % produtos.length);
     };
 
@@ -197,7 +208,11 @@ export default function VitrineProdutos() {
         </div>
 
         <div key={`conteudo-${indice}`} className="conteudo-produto-transicao">
-          <Carrossel imagens={imagensDoProduto} nomeProduto={produto.nome} />
+          <Carrossel
+            imagens={imagensDoProduto}
+            nomeProduto={produto.nome}
+            aoMudarFoto={setFotoAtiva}
+          />
 
           <div className="infos-produto">
             <h2 className="titulo-detalhe">{produto.nome}</h2>

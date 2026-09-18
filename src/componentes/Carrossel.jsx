@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
-export default function Carrossel({ imagens = [], nomeProduto = 'Produto' }) {
+export default function Carrossel({
+  imagens = [],
+  nomeProduto = 'Produto',
+  aoMudarFoto,
+}) {
   const [indiceFoto, setIndiceFoto] = useState(0);
   const [toqueInicioX, setToqueInicioX] = useState(null);
   const [toqueFimX, setToqueFimX] = useState(null);
@@ -21,24 +25,30 @@ export default function Carrossel({ imagens = [], nomeProduto = 'Produto' }) {
   useEffect(() => {
     setIndiceFoto(0);
     setErros({});
+    if (aoMudarFoto) aoMudarFoto(0);
   }, [imagens]);
 
   // Setas de cima das imagens passam APENAS as fotos
   const fotoAnterior = (e) => {
     if (e) e.stopPropagation();
     if (total <= 1) return;
-    setIndiceFoto((curr) => (curr - 1 + total) % total);
+    const novoIndice = (indiceFoto - 1 + total) % total;
+    setIndiceFoto(novoIndice);
+    if (aoMudarFoto) aoMudarFoto(novoIndice);
   };
 
   const proximaFoto = (e) => {
     if (e) e.stopPropagation();
     if (total <= 1) return;
-    setIndiceFoto((curr) => (curr + 1) % total);
+    const novoIndice = (indiceFoto + 1) % total;
+    setIndiceFoto(novoIndice);
+    if (aoMudarFoto) aoMudarFoto(novoIndice);
   };
 
   const irParaFoto = (index, e) => {
     if (e) e.stopPropagation();
     setIndiceFoto(index);
+    if (aoMudarFoto) aoMudarFoto(index);
   };
 
   // Suporte a swipe no celular para passar as fotos
