@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 export default function Carrossel({
   imagens = [],
   nomeProduto = 'Produto',
+  fotoAtiva = 0,
   aoMudarFoto,
 }) {
-  const [indiceFoto, setIndiceFoto] = useState(0);
   const [toqueInicioX, setToqueInicioX] = useState(null);
   const [toqueFimX, setToqueFimX] = useState(null);
   const [erros, setErros] = useState({});
@@ -21,11 +21,15 @@ export default function Carrossel({
   const lista = (Array.isArray(imagens) ? imagens : [imagens].filter(Boolean)).map(formatarCaminho);
   const total = lista.length;
 
-  // Quando o produto ou as imagens mudarem, reseta para a primeira foto
+  // Garante que o índice da foto esteja dentro dos limites válidos
+  const indiceFoto = Math.min(
+    Math.max(0, typeof fotoAtiva === 'number' ? fotoAtiva : 0),
+    Math.max(0, total - 1)
+  );
+
+  // Reseta erros quando a lista de fotos mudar
   useEffect(() => {
-    setIndiceFoto(0);
     setErros({});
-    if (aoMudarFoto) aoMudarFoto(0);
   }, [imagens]);
 
   // Setas de cima das imagens passam APENAS as fotos
@@ -33,7 +37,6 @@ export default function Carrossel({
     if (e) e.stopPropagation();
     if (total <= 1) return;
     const novoIndice = (indiceFoto - 1 + total) % total;
-    setIndiceFoto(novoIndice);
     if (aoMudarFoto) aoMudarFoto(novoIndice);
   };
 
@@ -41,13 +44,11 @@ export default function Carrossel({
     if (e) e.stopPropagation();
     if (total <= 1) return;
     const novoIndice = (indiceFoto + 1) % total;
-    setIndiceFoto(novoIndice);
     if (aoMudarFoto) aoMudarFoto(novoIndice);
   };
 
   const irParaFoto = (index, e) => {
     if (e) e.stopPropagation();
-    setIndiceFoto(index);
     if (aoMudarFoto) aoMudarFoto(index);
   };
 

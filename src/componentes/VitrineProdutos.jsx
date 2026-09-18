@@ -71,68 +71,125 @@ function IndicadorNumeroSuave({ indice, total, direcao }) {
   );
 }
 
+function extrairProdutoEFotoDaUrl() {
+  if (typeof window === "undefined") {
+    return { indiceProduto: null, indiceFoto: 0 };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const paramProduto =
+    params.get("produto") ||
+    params.get("item") ||
+    window.location.hash.replace("#", "");
+
+  if (!paramProduto) {
+    return { indiceProduto: null, indiceFoto: 0 };
+  }
+
+  const indiceEncontrado = encontrarIndiceProdutoPorIdentificador(paramProduto);
+  if (indiceEncontrado === -1) {
+    return { indiceProduto: null, indiceFoto: 0 };
+  }
+
+  const prod = produtos[indiceEncontrado];
+  const listaFotos = Array.isArray(prod?.imagemCapa)
+    ? prod.imagemCapa
+    : prod?.imagemCapa
+    ? [prod.imagemCapa]
+    : [];
+
+  const paramFoto =
+    params.get("foto") ||
+    params.get("img") ||
+    params.get("imagem") ||
+    params.get("f");
+
+  let fotoIndex = 0;
+  if (paramFoto && listaFotos.length > 0) {
+    const num = parseInt(paramFoto, 10);
+    if (!isNaN(num)) {
+      fotoIndex = num > 0 ? num - 1 : 0;
+    } else {
+      const encontrada = listaFotos.findIndex((img) =>
+        String(img).toLowerCase().includes(paramFoto.toLowerCase())
+      );
+      if (encontrada !== -1) {
+        fotoIndex = encontrada;
+      }
+    }
+  }
+
+  if (fotoIndex < 0 || (listaFotos.length > 0 && fotoIndex >= listaFotos.length)) {
+    fotoIndex = 0;
+  }
+
+  return { indiceProduto: indiceEncontrado, indiceFoto: fotoIndex };
+}
+
 export default function VitrineProdutos() {
-  const [indice, setIndice] = useState(null);
+  const [dadosIniciais] = useState(extrairProdutoEFotoDaUrl);
+  const [indice, setIndice] = useState(dadosIniciais.indiceProduto);
+  const [fotoAtiva, setFotoAtiva] = useState(dadosIniciais.indiceFoto);
   const [direcao, setDirecao] = useState("neutro");
   const [copiado, setCopiado] = useState(false);
-  const [fotoAtiva, setFotoAtiva] = useState(0);
   const detalhesRef = useRef(null);
 
-  // Lê o parâmetro da URL na inicialização e sincroniza com o histórico (ex: botão voltar do celular)
+  // Lê o parâmetro da URL na inicialização e sincroniza com o histórico (ex: botão voltar/avançar do celular)
   useEffect(() => {
     const sincronizarProdutoDaUrl = () => {
-      const params = new URLSearchParams(window.location.search);
-      const paramProduto =
-        params.get("produto") ||
-        params.get("item") ||
-        window.location.hash.replace("#", "");
-
-      if (paramProduto) {
-        const indiceEncontrado =
-          encontrarIndiceProdutoPorIdentificador(paramProduto);
-        if (indiceEncontrado !== -1) {
-          setIndice(indiceEncontrado);
-          return;
-        }
-      }
-      setIndice(null);
+      const { indiceProduto, indiceFoto } = extrairProdutoEFotoDaUrl();
+      setIndice(indiceProduto);
+      setFotoAtiva(indiceFoto);
     };
 
-    sincronizarProdutoDaUrl();
     window.addEventListener("popstate", sincronizarProdutoDaUrl);
-    return () =>
+    window.addEventListener("hashchange", sincronizarProdutoDaUrl);
+    return () => {
       window.removeEventListener("popstate", sincronizarProdutoDaUrl);
+      window.removeEventListener("hashchange", sincronizarProdutoDaUrl);
+    };
   }, []);
 
   useEffect(() => {
     setCopiado(false);
-    setFotoAtiva(0);
 
     // Quando abrir um produto, rola suavemente até o elemento se necessário
     if (indice !== null && detalhesRef.current) {
-      detalhesRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
+      const timer = setTimeout(() => {
+        if (detalhesRef.current) {
+          detalhesRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [indice]);
 
   const abrirProduto = (i) => {
     setDirecao("neutro");
+    setFotoAtiva(0);
     setIndice(i);
     const prod = produtos[i];
     if (prod) {
       const url = new URL(window.location.href);
       url.searchParams.set("produto", prod.slug || prod.id);
-      window.history.pushState({ produto: prod.slug }, "", url.toString());
+      url.searchParams.set("foto", "1");
+      window.history.pushState({ produto: prod.slug, foto: 1 }, "", url.toString());
     }
   };
 
   const fecharProduto = () => {
     setIndice(null);
+    setFotoAtiva(0);
     const url = new URL(window.location.href);
     url.searchParams.delete("produto");
     url.searchParams.delete("item");
+    url.searchParams.delete("foto");
+    url.searchParams.delete("img");
+    url.searchParams.delete("imagem");
+    url.searchParams.delete("f");
     url.hash = "";
     window.history.pushState({}, "", url.toString());
   };
@@ -146,7 +203,8 @@ export default function VitrineProdutos() {
     if (prod) {
       const url = new URL(window.location.href);
       url.searchParams.set("produto", prod.slug || prod.id);
-      window.history.replaceState({ produto: prod.slug }, "", url.toString());
+      url.searchParams.set("foto", "1");
+      window.history.replaceState({ produto: prod.slug, foto: 1 }, "", url.toString());
     }
   };
 
@@ -159,7 +217,25 @@ export default function VitrineProdutos() {
     if (prod) {
       const url = new URL(window.location.href);
       url.searchParams.set("produto", prod.slug || prod.id);
-      window.history.replaceState({ produto: prod.slug }, "", url.toString());
+      url.searchParams.set("foto", "1");
+      window.history.replaceState({ produto: prod.slug, foto: 1 }, "", url.toString());
+    }
+  };
+
+  const handleMudarFoto = (novoIndiceFoto) => {
+    setFotoAtiva(novoIndiceFoto);
+    if (indice !== null) {
+      const prod = produtos[indice];
+      if (prod) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("produto", prod.slug || prod.id);
+        url.searchParams.set("foto", String(novoIndiceFoto + 1));
+        window.history.replaceState(
+          { produto: prod.slug, foto: novoIndiceFoto + 1 },
+          "",
+          url.toString()
+        );
+      }
     }
   };
 
@@ -178,18 +254,23 @@ export default function VitrineProdutos() {
       : [produtoAtual.imagemCapa];
 
     // Pega a foto que o usuário selecionou no momento
-    const caminhoFoto = listaFotos[fotoAtiva] || listaFotos[0];
+    const indiceFotoAtual = Math.min(
+      Math.max(0, fotoAtiva),
+      Math.max(0, listaFotos.length - 1)
+    );
+    const caminhoFoto = listaFotos[indiceFotoAtual] || listaFotos[0];
 
     const urlFotoCompleta = caminhoFoto.startsWith("http")
       ? caminhoFoto
       : `${window.location.origin}${caminhoFoto}`;
 
-    // Monta a URL direta para o produto (ex: https://site.com/?produto=casamentos)
+    // Monta a URL direta para o produto e para a foto específica compartilhada
     const slug = produtoAtual.slug || produtoAtual.id;
     const urlBase = `${window.location.origin}${window.location.pathname}`
       .replace(/\/index\.html$/, "")
       .replace(/\/+$/, "");
-    const urlProduto = `${urlBase}?produto=${slug}`;
+    const numeroFoto = indiceFotoAtual + 1;
+    const urlProduto = `${urlBase}?produto=${slug}&foto=${numeroFoto}`;
 
     const textoMensagem = `Olha que lindo esse item de ${produtoAtual.nome} da CJ Personalizados! ✨\n${urlProduto}`;
 
@@ -205,7 +286,7 @@ export default function VitrineProdutos() {
               ? blob.type
               : "image/jpeg";
             const extensao = tipo.includes("png") ? "png" : "jpeg";
-            const nomeArquivo = `${produtoAtual.nome.toLowerCase().replace(/\s+/g, "-")}-foto-${fotoAtiva + 1}.${extensao}`;
+            const nomeArquivo = `${produtoAtual.nome.toLowerCase().replace(/\s+/g, "-")}-foto-${numeroFoto}.${extensao}`;
             arquivoFoto = new File([blob], nomeArquivo, { type: tipo });
           } catch (e) {
             console.warn("Não foi possível processar o arquivo da imagem:", e);
@@ -292,7 +373,8 @@ export default function VitrineProdutos() {
           <Carrossel
             imagens={imagensDoProduto}
             nomeProduto={produto.nome}
-            aoMudarFoto={setFotoAtiva}
+            fotoAtiva={fotoAtiva}
+            aoMudarFoto={handleMudarFoto}
           />
 
           <div className="infos-produto">
