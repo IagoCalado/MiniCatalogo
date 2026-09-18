@@ -1029,6 +1029,81 @@ body {
   transform: translateY(0);
 }
 
+.acoes-produto {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.acoes-produto .botao-whatsapp {
+  flex: 1;
+  width: auto;
+}
+
+.botao-compartilhar {
+  width: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 24, 27, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  color: var(--cor-texto-secundario);
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.5);
+}
+
+.botao-compartilhar:hover {
+  background: rgba(39, 39, 42, 0.95);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(34, 197, 94, 0.25);
+}
+
+.botao-compartilhar:active {
+  transform: translateY(0);
+}
+
+.botao-compartilhar.copiado {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--cor-destaque);
+  color: #4ade80;
+}
+
+.aviso-copiado {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: #18181b;
+  border: 1px solid var(--cor-destaque);
+  color: #4ade80;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
+  animation: animacaoAvisoCopiado 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 10;
+}
+
+@keyframes animacaoAvisoCopiado {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .rodape {
   text-align: center;
   font-size: 10px;
