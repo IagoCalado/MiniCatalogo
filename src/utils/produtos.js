@@ -66,6 +66,7 @@ const listaDeProdutos = [
       "/garrafasCopos/garrafa-01.jpeg",
       "/garrafasCopos/garrafa-02.jpeg",
       "/garrafasCopos/garrafa-03.jpeg",
+      "/garrafasCopos/garrafa-04.jpeg",
       "/garrafasCopos/copo-01.jpeg",
     ],
     descricao: "Garrafas e copos personalizados.",
